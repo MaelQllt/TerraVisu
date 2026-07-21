@@ -1,3 +1,6 @@
+import tempfile
+
+import fiona
 from django.db.models import Count
 from rest_framework import status
 from rest_framework.decorators import action
@@ -74,3 +77,26 @@ class SourceModelViewset(ModelViewSet):
         result = source.get_layer().get_property_values(property_to_list)
 
         return Response(result)
+
+    @action(detail=False, methods=["post"], url_path="gpkg-layers")
+    def gpkg_layers(self, request):
+        uploaded_file = request.FILES.get("file")
+        if not uploaded_file:
+            return Response(
+                {"error": "No file provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            file_data = uploaded_file.read()
+            with tempfile.NamedTemporaryFile(suffix=".gpkg") as tmp:
+                tmp.write(file_data)
+                tmp.flush()
+                layer_names = fiona.listlayers(tmp.name)
+        except Exception as e:
+            return Response(
+                {"error": f"Invalid GPKG file: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"layer_names": list(layer_names)})

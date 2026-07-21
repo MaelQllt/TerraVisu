@@ -16,6 +16,7 @@ from .models import (
     CSVSource,
     Field,
     GeoJSONSource,
+    GeoPackageSource,
     PostGISSource,
     ShapefileSource,
     Source,
@@ -308,6 +309,13 @@ class GeoJSONSourceSerializer(FileSourceSerializer):
 class ShapefileSourceSerializer(FileSourceSerializer):
     class Meta:
         model = ShapefileSource
+        fields = "__all__"
+        extra_kwargs = {"file": {"write_only": True}}
+
+
+class GeoPackageSourceSerializer(FileSourceSerializer):
+    class Meta:
+        model = GeoPackageSource
         fields = "__all__"
         extra_kwargs = {"file": {"write_only": True}}
 

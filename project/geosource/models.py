@@ -492,6 +492,50 @@ class ShapefileSource(Source):
         verbose_name_plural = _("Shapefile Sources")
 
 
+class GeoPackageSource(Source):
+    file = models.FileField(upload_to="geosource/geopackage/%Y/")
+    layer_name = models.CharField(max_length=255, blank=True, default="")
+
+    def _get_records(self, limit=None):
+        file_data = self.file.read()
+        layers = fiona.listlayers(self.file.path)
+
+        layer = (
+            self.layer_name
+            if self.layer_name and self.layer_name in layers
+            else layers[0]
+        )
+
+        with fiona.BytesCollection(file_data, layer=layer) as gpkg:
+            limit = limit if limit else len(gpkg)
+            ccs = CRS(to_string(gpkg.crs))
+            srid = ccs.to_epsg() or 4326
+
+            records = []
+            for feature in gpkg[:limit]:
+                geometry = GEOSGeometry(
+                    json.dumps(
+                        {
+                            "type": feature.get("geometry").get("type"),
+                            "coordinates": feature.get("geometry").get("coordinates"),
+                        }
+                    )
+                )
+                geometry.srid = srid
+                records.append(
+                    {
+                        self.SOURCE_GEOM_ATTRIBUTE: geometry,
+                        **feature.get("properties", {}),
+                    }
+                )
+
+            return records, []
+
+    class Meta:
+        verbose_name = _("GeoPackage Source")
+        verbose_name_plural = _("GeoPackage Sources")
+
+
 class CommandSource(Source):
     command = models.CharField(max_length=255)
 
