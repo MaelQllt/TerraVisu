@@ -7,7 +7,7 @@ Changelog
 
 **Documentation:**
 
-- Icons and group layer's management improvements (ref #1321)
+- Icons, search bar and group layer's management improvements (ref #1321)
 
 2026.07.00      (2026-07-31)
 ----------------------------
