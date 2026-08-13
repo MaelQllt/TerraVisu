@@ -696,6 +696,34 @@ Lors de la conception d’un style avec une analyse, il est possible d’activer
 
 .. image :: ../_static/images/admin/admin_couche_style_assistant.png
 
+Analyser la distribution des données
+""""""""""""""""""""""""""""""""""""
+
+Lors de la création d'un style basé sur la **discrétisation d'un champ numérique**, TerraVisu fournit plusieurs informations statistiques permettant de mieux comprendre la répartition des valeurs et d'adapter le découpage en classes.
+
+Cette visualisation, inspirée de `Magrit <https://magrit.cnrs.fr/>`_, permet notamment d'identifier rapidement une distribution déséquilibrée, la présence de valeurs extrêmes ou une forte concentration des données sur certaines plages de valeurs.
+
+.. image :: ../_static/images/admin/admin_couche_style_distributiondonnees.png
+
+Plusieurs informations sont disponibles pour analyser les données :
+
+* **Résumé statistique** : présente les principaux indicateurs du champ sélectionné : nombre de valeurs, minimum, maximum, moyenne, médiane et écart-type.
+* **Distribution des données** : représente graphiquement la répartition des valeurs du champ. Les lignes correspondant à la moyenne, à la médiane et à l'écart-type sont affichées par défaut afin de faciliter l'interprétation de la distribution.
+* **Distribution par classe** : représente la répartition des données selon la méthode de discrétisation et le nombre de classes sélectionnés. Les bornes de chaque classe ainsi que le nombre d'entités qu'elle contient sont affichés afin de visualiser immédiatement le résultat de la discrétisation.
+
+Ces représentations sont automatiquement mises à jour en fonction des paramètres choisis, notamment :
+
+* la **méthode de discrétisation** (Jenks, quantiles, intervalles égaux, etc.) ;
+* le **nombre de classes** ;
+* la **palette de couleurs** (séquentielle, divergente ou personnalisée).
+
+Réutiliser une palette de couleurs
+*************************************
+
+Il est également possible de **copier la configuration des couleurs d'une palette et de ses classes**, puis de l'importer dans la discrétisation d'une autre couche.
+
+Cette fonctionnalité permet de réutiliser facilement une même représentation colorimétrique et d'harmoniser les styles entre plusieurs couches.
+
 Exemples de styles Mapbox avancés
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
