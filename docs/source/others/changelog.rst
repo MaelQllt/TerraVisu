@@ -2,6 +2,13 @@
 Changelog
 ==========
 
+2026.07.00 +dev (XXXX-XX-XX)
+----------------------------
+
+**Documentation:**
+
+- Icons, search bar, group layer's management and discretization improvements (ref #1321)
+
 2026.07.00      (2026-07-31)
 ----------------------------
 
