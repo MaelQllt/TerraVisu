@@ -2,6 +2,7 @@
 Changelog
 ==========
 
+
 2026.08.00      (2026-08-14)
 ----------------------------
 
@@ -22,6 +23,10 @@ Changelog
 **Bugfix:**
 
 - (Admin) Fix renaming layer in tree not updating the layer label on the front
+
+**Documentation:**
+
+- Icons, search bar, group layer's management and discretization improvements (ref #1321)
 
 2026.07.00      (2026-07-31)
 ----------------------------
