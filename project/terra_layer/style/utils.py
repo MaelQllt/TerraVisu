@@ -8,8 +8,6 @@ from .classifiers import (
     discretize_jenks_kmeans1d,
 )
 
-
-
 style_type_2_legend_shape = {
     "fill-extrusion": "square",
     "fill": "square",

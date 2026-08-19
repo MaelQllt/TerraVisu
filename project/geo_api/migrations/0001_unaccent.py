@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql="CREATE EXTENSION IF NOT EXISTS unaccent;",
-            reverse_sql="",
-            # reverse_sql="DROP EXTENSION unaccent;",
+            # pas de DROP EXTENSION au retour : d'autres apps peuvent l'utiliser
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]

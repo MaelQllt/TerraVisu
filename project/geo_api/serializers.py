@@ -1,7 +1,6 @@
-from rest_framework import serializers
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from geostore.models import Feature
 from geostore.serializers import FeatureSerializer as GeostoreFeatureSerializer
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 
 class FeatureListSerializer(GeostoreFeatureSerializer):
@@ -29,9 +28,10 @@ class FeatureGeoSerializer(GeoFeatureModelSerializer):
     Serializer avec geometry (GeoJSON)
     --> hérite de GeoFeatureModelSerializer
     """
+
     class Meta:
         model = Feature
-        geo_field = "geom" # champ de géométrie PostGIS
+        geo_field = "geom"  # champ de géométrie PostGIS
         fields = ("id", "identifier", "properties")
 
     def get_properties(self, instance, fields):

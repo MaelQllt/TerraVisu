@@ -5,7 +5,9 @@ Base path: `/api/geo-api/{layer_name}/`
 - `{layer_name}` can be a layer slug or a layer numeric ID.
 - `{identifier}` accepts either the feature PK (integer) or the `identifier` value (string).
 - `{format}` can be any DRF format suffix (e.g. `json`, `api`, `geojson`, `kml`, `gpx`).
-- Authentication: read operations are public; write operations require authentication.
+- Authentication: read operations are public; write operations require the
+  `geostore.can_manage_layers` permission. Layers restricted through
+  `authorized_groups` are only readable by members of those groups.
 
 ---
 
@@ -18,7 +20,10 @@ Base path: `/api/geo-api/{layer_name}/`
 | GET | `/api/geo-api/{layer_name}/feature/count/` | Nombre d'entités filtrées |
 | GET | `/api/geo-api/{layer_name}/feature/extent/` | BBOX de toute la couche |
 | GET | `/api/geo-api/{layer_name}/feature/stats/{field}/` | Statistiques sur une propriété |
+| GET | `/api/geo-api/{layer_name}/feature/stats/{field}/distribution/` | Histogramme, boxplot et échantillon |
+| GET | `/api/geo-api/{layer_name}/feature/discretize/{field}/` | Bornes de classes pour une légende |
 | GET | `/api/geo-api/{layer_name}/feature/distinct/{field}/` | Valeurs distinctes d'une propriété |
+| GET | `/api/geo-api/{layer_name}/feature/distinct/all/{field}/` | Idem, sans pagination |
 | GET | `/api/geo-api/{layer_name}/feature/{identifier}/extent/` | BBOX d'une entité |
 | GET, PUT, PATCH, DELETE | `/api/geo-api/{layer_name}/feature/{identifier}/extra_geometry/{id_extra_feature}/` | Gestion des géométries supplémentaires |
 | POST | `/api/geo-api/{layer_name}/feature/{identifier}/extra_layer/{id_extra_layer}/` | Création d'une géométrie supplémentaire |
@@ -181,13 +186,68 @@ GET /api/geo-api/communes-simplifiees/feature/98178/extent/
 GET /api/geo-api/{layer_name}/feature/stats/{field}/
 ```
 
-Retourne les statistiques (min, max, avg, count) pour une propriété numérique.
+Retourne les statistiques d'une propriété numérique. Les valeurs non numériques
+sont ignorées (comptées comme nulles) plutôt que de faire échouer la requête.
 
 ```json
 GET /api/geo-api/communes-simplifiees/feature/stats/population/
 
-{ "min": 0, "max": 2500000, "avg": 12500.42, "count": 35000 }
+{
+    "min": 0, "max": 2500000, "avg": 12500.42, "sum": 437514700,
+    "count": 34999, "total_count": 35000, "std_dev": 48210.5,
+    "median": 1780.0, "q1": 480.0, "q3": 6120.0
+}
 ```
+
+`count` compte les entités dont la propriété est numérique, `total_count` toutes
+les entités de la couche.
+
+---
+
+## Distribution
+
+```
+GET /api/geo-api/{layer_name}/feature/stats/{field}/distribution/
+```
+
+Histogramme (bornes de classes calculées par la règle de Freedman-Diaconis,
+plafonné à 100 classes), boxplot et échantillon d'au plus 1000 valeurs.
+
+```json
+{
+    "bins": [{ "x0": 0, "x1": 500, "count": 12043 }],
+    "boxplot": { "min": 0, "q1": 480, "median": 1780, "q3": 6120, "max": 2500000 },
+    "sample": [12, 480, 1780]
+}
+```
+
+---
+
+## Discretize
+
+```
+GET /api/geo-api/{layer_name}/feature/discretize/{field}/
+```
+
+Retourne les bornes de classes d'une légende et le nombre d'entités par classe.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `method` | string | `jenks` (défaut), `jenks_kmeans1d`, `quantile`, `equal_interval`, `manual` |
+| `classes` | int | Nombre de classes, entre 1 et 100 (défaut 5). Ignoré si `method=manual` |
+| `breaks` | `v1,v2,...` | Bornes croissantes, obligatoire et exclusif à `method=manual` |
+
+```json
+GET /api/geo-api/communes-simplifiees/feature/discretize/population/?classes=3
+
+{
+    "breaks": [0, 1200, 15000, 2500000],
+    "entitiesByClass": [18000, 12000, 5000],
+    "stats": { "min": 0, "max": 2500000, "...": "..." }
+}
+```
+
+Un `method` inconnu ou un `classes` hors bornes renvoie `400`.
 
 ---
 

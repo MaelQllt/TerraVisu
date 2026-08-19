@@ -5,7 +5,6 @@ from functools import reduce
 from django.contrib.gis.geos import Polygon
 from django.db.models import F, FloatField, Func, Q, Value
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, NullIf
 from geostore.filters import JSONSearchField
 from rest_framework.filters import BaseFilterBackend, OrderingFilter
 
@@ -14,19 +13,47 @@ class Unaccent(Func):
     function = "unaccent"
 
 
-class RegexpReplace(Func):
-    function = "REGEXP_REPLACE"
-    arity = 3 # prend 3 params, le texte, le pattern et le remplacement
+class ToFloat(Func):
+    """Convertit une propriété JSON en float, NULL si la valeur n'est pas numérique.
+
+    Les séparateurs (espaces, symboles) sont retirés avant conversion, puis la
+    valeur nettoyée est validée : une chaîne non numérique donne NULL au lieu de
+    faire échouer toute la requête avec un DataError.
+    """
+
+    # substring(... from pattern) renvoie NULL si la valeur nettoyée n'est pas
+    # numérique. L'expression n'apparaît qu'une fois : la répéter dupliquerait
+    # aussi son placeholder SQL sans dupliquer le paramètre associé.
+    template = (
+        "substring(regexp_replace(%(expressions)s, '[^0-9.-]', '', 'g') "
+        "from '^-?[0-9]+(?:\\.[0-9]+)?$')::double precision"
+    )
+    arity = 1
+    output_field = FloatField()
 
 
-## Paramètres de l'URL qui ne sont pas des filtres
-CONTROL_PARAMS = {"limit", "offset", "ordering", "format", "fields", "search",
-                  "bbox", "all", "geometry"}
+def cast_numeric(key):
+    """Expression float sécurisée pour la propriété JSON `key`."""
+    return ToFloat(KeyTextTransform(key, "properties"))
 
-## regex pour opérateurs
+
+# Paramètres de l'URL qui ne sont pas des filtres
+CONTROL_PARAMS = {
+    "limit",
+    "offset",
+    "ordering",
+    "format",
+    "fields",
+    "search",
+    "bbox",
+    "all",
+    "geometry",
+}
+
+# regex pour opérateurs
 _RE_OPERATOR = re.compile(r"^(>=|<=|>|<)(.+)$")
 
-## regex pour intervalles
+# regex pour intervalles
 _RE_RANGE = re.compile(r"^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$")
 
 
@@ -78,9 +105,9 @@ def _clean_params(query_params):
 
 
 class SearchAllFieldsBackend(JSONSearchField):
-    #récupère les champs à chercher
+    # récupère les champs à chercher
     def get_search_fields(self, view, request):
-        # règle bug geostore bug quand pas de schema défini 
+        # contourne un bug geostore quand aucun schema n'est défini
         fields = super().get_search_fields(view, request)
         if not fields:
             layer = view.get_layer()
@@ -89,7 +116,7 @@ class SearchAllFieldsBackend(JSONSearchField):
                 fields = [f"properties__{k}" for k in first["properties"] if k]
         return fields
 
-    # cherche dasn tous les champs
+    # cherche dans tous les champs
     def filter_queryset(self, request, queryset, view):
         # équivalent de search dans tous les champs, insensible aux accents
         search_fields = self.get_search_fields(view, request)
@@ -99,16 +126,14 @@ class SearchAllFieldsBackend(JSONSearchField):
         filters = []
         for i, field in enumerate(search_fields):
             if field.startswith("properties__"):
-                key = field[len("properties__"):]
+                key = field[len("properties__") :]
                 ann = f"_unas_{i}"
-                queryset = queryset.annotate(**{
-                    ann: Unaccent(KeyTextTransform(key, "properties"))
-                })
+                queryset = queryset.annotate(
+                    **{ann: Unaccent(KeyTextTransform(key, "properties"))}
+                )
             else:
                 ann = f"_unas_{i}"
-                queryset = queryset.annotate(**{
-                    ann: Unaccent(F(field))
-                })
+                queryset = queryset.annotate(**{ann: Unaccent(F(field))})
             filters.append(Q(**{f"{ann}__icontains": Unaccent(Value(search_terms[0]))}))
         return queryset.filter(reduce(operator.or_, filters))
 
@@ -118,12 +143,12 @@ class NoAccentFilterBackend(BaseFilterBackend):
 
     def filter_queryset(self, request, queryset, view):
         for cat, key, *rest in _classify_params(request.query_params):
-            if cat != "text": # pas la peine de unaccent si pas du texte
+            if cat != "text":  # pas la peine de unaccent si pas du texte
                 continue
             ann = f"_una_{key}"
-            queryset = queryset.annotate(**{
-                ann: Unaccent(KeyTextTransform(key, "properties"))
-            }).filter(**{f"{ann}__icontains": Unaccent(Value(rest[0]))})
+            queryset = queryset.annotate(
+                **{ann: Unaccent(KeyTextTransform(key, "properties"))}
+            ).filter(**{f"{ann}__icontains": Unaccent(Value(rest[0]))})
         return queryset
 
 
@@ -153,7 +178,7 @@ class OperatorFilterBackend(BaseFilterBackend):
                 queryset = queryset.filter(Q(**{f"properties__{key}__in": rest[0]}))
             elif cat in ("op", "range"):
                 ann = f"_op_{key}"
-                qs = queryset.annotate(**{ann: self._cast_numeric(key)})
+                qs = queryset.annotate(**{ann: cast_numeric(key)})
                 if cat == "op":
                     try:
                         op_val = float(rest[1])
@@ -166,19 +191,19 @@ class OperatorFilterBackend(BaseFilterBackend):
                     queryset = qs.filter(**{f"{ann}__gte": lo, f"{ann}__lte": hi})
         return queryset
 
-    @staticmethod
-    def _cast_numeric(key):
-        return Cast(NullIf(RegexpReplace(KeyTextTransform(key, "properties"), Value(r"[^\d.\-]"), Value("")), Value("")), FloatField())
 
-
-class BBoxFilterBackend(BaseFilterBackend): # pour le moment pas utile
+class BBoxFilterBackend(BaseFilterBackend):
     """?bbox=min_lng,min_lat,max_lng,max_lat"""
 
     def filter_queryset(self, request, queryset, view):
         bbox = request.query_params.get("bbox")
         if not bbox:
             return queryset
-        parts = [float(x) for x in bbox.split(",")]
+        try:
+            parts = [float(x) for x in bbox.split(",")]
+        except (ValueError, TypeError):
+            # bbox illisible : on ignore le filtre plutôt que de renvoyer une 500
+            return queryset
         if len(parts) != 4:
             return queryset
         polygon = Polygon.from_bbox(tuple(parts))
@@ -190,10 +215,12 @@ class OrderingFilterBackend(OrderingFilter):
 
     def get_valid_fields(self, queryset, view, context={}):
         fields = list(super().get_valid_fields(queryset, view, context=context))
-        layer = view.get_layer() if hasattr(view, 'get_layer') else None
+        layer = view.get_layer() if hasattr(view, "get_layer") else None
         if layer and layer.schema:
-            fields += [(f'properties__{p}', layer.get_property_title(p))
-                       for p in layer.layer_properties]
+            fields += [
+                (f"properties__{p}", layer.get_property_title(p))
+                for p in layer.layer_properties
+            ]
         return fields
 
     def remove_invalid_fields(self, queryset, fields, view, request):
@@ -201,12 +228,12 @@ class OrderingFilterBackend(OrderingFilter):
         model_names = {f.name for f in queryset.model._meta.get_fields()}
         result = []
         for f in fields:
-            stripped = f.lstrip('-')
-            prefix = '-' if f.startswith('-') else ''
+            stripped = f.lstrip("-")
+            prefix = "-" if f.startswith("-") else ""
             if stripped in valid:
                 result.append(f)
             elif stripped not in model_names:
-                result.append(prefix + f'properties__{stripped}')
+                result.append(prefix + f"properties__{stripped}")
             else:
                 result.append(f)
         return result

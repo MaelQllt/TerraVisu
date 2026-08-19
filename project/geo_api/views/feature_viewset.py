@@ -1,16 +1,18 @@
 import unicodedata
 
+from django.contrib.gis.db.models.aggregates import Extent
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models.fields.json import KeyTextTransform
-from django.contrib.gis.db.models.aggregates import Extent
 from geostore.models import Feature
+from geostore.permissions import FeaturePermission
 from geostore.views import FeatureViewSet as GeostoreFeatureViewSet
 from geostore.views.mixins import MultipleFieldLookupMixin
+from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from ..filters import (
+    CONTROL_PARAMS,
     BBoxFilterBackend,
     NoAccentFilterBackend,
     OperatorFilterBackend,
@@ -20,23 +22,26 @@ from ..filters import (
     Unaccent,
     _clean_params,
 )
-from ..filters import CONTROL_PARAMS
 from ..mixins import AutoOrderMixin, PrefixBoostMixin
 from ..pagination import FeaturePagination
 from ..serializers import FeatureGeoSerializer, FeatureListSerializer
-
 from .discretize import DiscretizeMixin
 from .stats import StatsMixin
 
 
-class FeatureViewSet(StatsMixin, DiscretizeMixin,
-                     MultipleFieldLookupMixin,
-                     PrefixBoostMixin,
-                     AutoOrderMixin,
-                     GeostoreFeatureViewSet):
+class FeatureViewSet(
+    StatsMixin,
+    DiscretizeMixin,
+    MultipleFieldLookupMixin,
+    PrefixBoostMixin,
+    AutoOrderMixin,
+    GeostoreFeatureViewSet,
+):
     serializer_class = FeatureGeoSerializer
     pagination_class = FeaturePagination
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # Lecture anonyme (front public), écriture réservée à geostore.can_manage_layers
+    # et contrôle des layer.authorized_groups sur le détail.
+    permission_classes = (FeaturePermission,)
     lookup_fields = ("pk", "identifier")
     filter_backends = [
         SearchAllFieldsBackend,
@@ -49,7 +54,10 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
     ordering = "id"
 
     def get_serializer_class(self):
-        if "geometry" in self.request.query_params or "all" in self.request.query_params:
+        if (
+            "geometry" in self.request.query_params
+            or "all" in self.request.query_params
+        ):
             return FeatureGeoSerializer
         if self.kwargs.get("format", "json") == "geojson":
             return FeatureGeoSerializer
@@ -59,10 +67,16 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
         context = super().get_serializer_context()
         requested_fields = self.request.query_params.get("fields", "")
         if requested_fields:
-            context["selected_fields"] = [f.strip() for f in requested_fields.split(",") if f.strip()]
-        elif "all" not in self.request.query_params and "geometry" not in self.request.query_params:
+            context["selected_fields"] = [
+                f.strip() for f in requested_fields.split(",") if f.strip()
+            ]
+        elif (
+            "all" not in self.request.query_params
+            and "geometry" not in self.request.query_params
+        ):
             filter_fields = [
-                key for key, _ in _clean_params(self.request.query_params)
+                key
+                for key, _ in _clean_params(self.request.query_params)
                 if key not in CONTROL_PARAMS and not key.startswith("properties__")
             ]
             if filter_fields:
@@ -87,14 +101,21 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
             key = field.split("__", 1)[-1]
             ann = f"_sboost_{key}"
             una_ann = f"_una_sboost_{key}"
-            queryset = queryset.annotate(**{
-                una_ann: Unaccent(KeyTextTransform(key, "properties")),
-                ann: Case(
-                    When(**{f"{una_ann}__istartswith": Unaccent(Value(search_param))}, then=Value(0)),
-                    default=Value(1),
-                    output_field=IntegerField(),
-                )
-            })
+            queryset = queryset.annotate(
+                **{
+                    una_ann: Unaccent(KeyTextTransform(key, "properties")),
+                    ann: Case(
+                        When(
+                            **{
+                                f"{una_ann}__istartswith": Unaccent(Value(search_param))
+                            },
+                            then=Value(0),
+                        ),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    ),
+                }
+            )
             order_parts.append(ann)
         order_parts.extend(search_fields)
         return queryset, order_parts
@@ -102,7 +123,8 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
     @staticmethod
     def _strip_accents(s):
         return "".join(
-            c for c in unicodedata.normalize("NFKD", s)
+            c
+            for c in unicodedata.normalize("NFKD", s)
             if not unicodedata.category(c).startswith("M")
         )
 
@@ -113,12 +135,17 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
         for feature in features:
             props = feature.get("properties", {})
             for key, val in props.items():
-                if val is not None and search_clean in self._strip_accents(str(val).lower()):
+                if val is not None and search_clean in self._strip_accents(
+                    str(val).lower()
+                ):
                     props["search_match"] = key
                     break
 
     def _is_geojson_format(self):
-        if "geometry" in self.request.query_params or "all" in self.request.query_params:
+        if (
+            "geometry" in self.request.query_params
+            or "all" in self.request.query_params
+        ):
             return True
         return self.kwargs.get("format", "json") == "geojson"
 
@@ -135,7 +162,9 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
         queryset = self.filter_queryset(self.get_queryset())
         search_param = self.request.query_params.get("search", "").strip()
         if search_param:
-            queryset, search_boost_parts = self._add_search_boost_annotations(queryset, search_param)
+            queryset, search_boost_parts = self._add_search_boost_annotations(
+                queryset, search_param
+            )
         else:
             search_boost_parts = []
 
@@ -158,14 +187,23 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
         lookup = f"properties__{field}"
         if q:
             ann = f"_una_{field}"
-            qs = qs.annotate(**{
-                ann: Unaccent(KeyTextTransform(field, "properties")),
-                f"_boost_{field}": Case(
-                    When(**{f"{ann}__istartswith": Unaccent(Value(q))}, then=Value(0)),
-                    default=Value(1), output_field=IntegerField(),
-                )
-            }).filter(**{f"{ann}__icontains": Unaccent(Value(q))})
-            return qs.values_list(lookup, flat=True).order_by(f"_boost_{field}", ann).distinct()
+            qs = qs.annotate(
+                **{
+                    ann: Unaccent(KeyTextTransform(field, "properties")),
+                    f"_boost_{field}": Case(
+                        When(
+                            **{f"{ann}__istartswith": Unaccent(Value(q))}, then=Value(0)
+                        ),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    ),
+                }
+            ).filter(**{f"{ann}__icontains": Unaccent(Value(q))})
+            return (
+                qs.values_list(lookup, flat=True)
+                .order_by(f"_boost_{field}", ann)
+                .distinct()
+            )
         return qs.values_list(lookup, flat=True).distinct().order_by(lookup)
 
     @action(detail=False, methods=["get"], url_path="distinct/(?P<field>[^/.]+)")
@@ -194,7 +232,7 @@ class FeatureViewSet(StatsMixin, DiscretizeMixin,
 
         extent = qs.aggregate(Extent("geom"))["geom__extent"]
         if extent is None:
-            return Response({"error": "Aucune donnée"}, status=404)
+            return Response({"error": "no data"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"bbox": list(extent)})
 
     @action(detail=False, methods=["get"])

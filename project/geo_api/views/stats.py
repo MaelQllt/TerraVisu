@@ -1,13 +1,25 @@
 import math
 
-from django.db.models import Avg, Case, Count, FloatField, IntegerField, Max, Min, StdDev, Sum, Value, When
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    FloatField,
+    IntegerField,
+    Max,
+    Min,
+    StdDev,
+    Sum,
+    Value,
+    When,
+)
 from django.db.models.aggregates import Aggregate
-from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, Random
+from django.db.models.functions import Random
 from geostore.models import Feature
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from ..filters import cast_numeric
 
 STD_AGGS = frozenset({"min", "max", "avg", "sum", "count", "std_dev", "total_count"})
 QUANTILE_AGGS = {"median": 0.50, "q1": 0.25, "q3": 0.75}
@@ -16,11 +28,11 @@ ALL_STATS_FIELDS = STD_AGGS | set(QUANTILE_AGGS.keys())
 
 def _cast_field(field):
     clean = field.replace(".keyword", "")
-    return Cast(KeyTextTransform(clean, "properties"), FloatField())
+    return cast_numeric(clean)
 
 
 class Quantile(Aggregate):
-    function = 'PERCENTILE_CONT'
+    function = "PERCENTILE_CONT"
     output_field = FloatField()
     template = "%(function)s(%(quantile)s) WITHIN GROUP (ORDER BY %(expressions)s)"
 
@@ -37,22 +49,25 @@ def _count_by_intervals(qs, cast_field, intervals):
     last_idx = len(intervals) - 1
     for i, (x0, x1) in enumerate(intervals):
         if i == last_idx:
-            w = When(val__gte=Value(x0, output_field=FloatField()),
-                     val__lte=Value(x1, output_field=FloatField()),
-                     then=Value(i))
+            w = When(
+                val__gte=Value(x0, output_field=FloatField()),
+                val__lte=Value(x1, output_field=FloatField()),
+                then=Value(i),
+            )
         else:
-            w = When(val__gte=Value(x0, output_field=FloatField()),
-                     val__lt=Value(x1, output_field=FloatField()),
-                     then=Value(i))
+            w = When(
+                val__gte=Value(x0, output_field=FloatField()),
+                val__lt=Value(x1, output_field=FloatField()),
+                then=Value(i),
+            )
         cases.append(w)
     bucket_counts = dict(
-        (qs
-         .annotate(val=cast_field)
-         .annotate(bucket=Case(*cases, output_field=IntegerField(), default=Value(-1)))
-         .exclude(bucket__lt=0)
-         .values('bucket')
-         .annotate(cnt=Count('*'))
-         .values_list('bucket', 'cnt'))
+        qs.annotate(val=cast_field)
+        .annotate(bucket=Case(*cases, output_field=IntegerField(), default=Value(-1)))
+        .exclude(bucket__lt=0)
+        .values("bucket")
+        .annotate(cnt=Count("*"))
+        .values_list("bucket", "cnt")
     )
     return [bucket_counts.get(i, 0) for i in range(len(intervals))]
 
@@ -72,13 +87,20 @@ def _aggregate_stats(qs, cast_field, fields=None):
 
     agg_kwargs = {}
     for f in fields:
-        if f == "min": agg_kwargs[f] = Min(cast_field)
-        elif f == "max": agg_kwargs[f] = Max(cast_field)
-        elif f == "avg": agg_kwargs[f] = Avg(cast_field)
-        elif f == "sum": agg_kwargs[f] = Sum(cast_field)
-        elif f == "count": agg_kwargs[f] = Count(cast_field)
-        elif f == "std_dev": agg_kwargs[f] = StdDev(cast_field)
-        elif f == "total_count": agg_kwargs[f] = Count("*")
+        if f == "min":
+            agg_kwargs[f] = Min(cast_field)
+        elif f == "max":
+            agg_kwargs[f] = Max(cast_field)
+        elif f == "avg":
+            agg_kwargs[f] = Avg(cast_field)
+        elif f == "sum":
+            agg_kwargs[f] = Sum(cast_field)
+        elif f == "count":
+            agg_kwargs[f] = Count(cast_field)
+        elif f == "std_dev":
+            agg_kwargs[f] = StdDev(cast_field)
+        elif f == "total_count":
+            agg_kwargs[f] = Count("*")
         elif f in QUANTILE_AGGS:
             agg_kwargs[f] = Quantile(cast_field, quantile=QUANTILE_AGGS[f])
 
@@ -122,11 +144,13 @@ def _compute_fd_bins(values_qs, field, min_val, max_val, q1, q3, count=None):
 
     bins = []
     for (x0, x1), count in zip(intervals, bucket_counts):
-        bins.append({
-            "x0": _round_val(x0),
-            "x1": _round_val(x1),
-            "count": count,
-        })
+        bins.append(
+            {
+                "x0": _round_val(x0),
+                "x1": _round_val(x1),
+                "count": count,
+            }
+        )
 
     return bins
 
@@ -139,13 +163,14 @@ class StatsMixin:
         stats = _aggregate_stats(qs, cast_field, fields=ALL_STATS_FIELDS)
         return Response(stats)
 
-    @action(detail=False, methods=["get"],
-            url_path="stats/(?P<field>[^/.]+)/distribution")
+    @action(
+        detail=False, methods=["get"], url_path="stats/(?P<field>[^/.]+)/distribution"
+    )
     def distribution(self, request, layer=None, field=None):
         cast_field = _cast_field(field)
         qs = Feature.objects.filter(layer=self.get_layer())
 
-        needed = {"min", "max", "q1", "q3", "median", "count", "total_count"}
+        needed = {"min", "max", "q1", "q3", "median", "count"}
         stats = _aggregate_stats(qs, cast_field, fields=needed)
 
         min_val = stats.get("min")
@@ -157,9 +182,12 @@ class StatsMixin:
         q3_val = stats.get("q3")
 
         bins = _compute_fd_bins(
-            qs, field,
-            float(min_val), float(max_val),
-            float(q1_val or 0), float(q3_val or 0),
+            qs,
+            field,
+            float(min_val),
+            float(max_val),
+            float(q1_val or 0),
+            float(q3_val or 0),
             count=stats.get("count"),
         )
 
@@ -171,15 +199,18 @@ class StatsMixin:
             "max": _round_val(max_val),
         }
 
-        lookup = f"properties__{field}"
-        qs_filtered = qs.filter(**{f"{lookup}__isnull": False}).exclude(**{lookup: ""})
+        # On échantillonne la valeur déjà castée : les valeurs non numériques
+        # ressortent en NULL et sont écartées au lieu de faire échouer le float().
+        qs_filtered = qs.annotate(_val=cast_field).filter(_val__isnull=False)
         sample_count = stats.get("count", 0)
         if sample_count > 1000:
-            qs_sample = qs_filtered.annotate(_rnd=Random()).filter(
-                _rnd__lt=1000.0 / sample_count
-            ).values_list(lookup, flat=True)[:1000]
+            qs_sample = (
+                qs_filtered.annotate(_rnd=Random())
+                .filter(_rnd__lt=1000.0 / sample_count)
+                .values_list("_val", flat=True)[:1000]
+            )
         else:
-            qs_sample = qs_filtered.values_list(lookup, flat=True)
+            qs_sample = qs_filtered.values_list("_val", flat=True)
         sample = [float(v) for v in qs_sample if v is not None]
 
         return Response({"bins": bins, "boxplot": boxplot, "sample": sample})
