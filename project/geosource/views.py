@@ -612,10 +612,17 @@ class SourceModelViewset(ModelViewSet):
             except Exception:
                 logger.warning("bbox query failed for source %s", pk)
 
+        geometry_types = None
+        mixed_geometries = False
+        if geom_name:
+            geometry_types = [geom_name]
+
         return Response({
             "record_count": record_count,
             "geometry_type": geom_id,
             "geometry_type_name": geom_name,
+            "geometry_types": geometry_types,
+            "mixed_geometries": mixed_geometries,
             "crs": crs,
             "fields": fields,
             "features": features,
