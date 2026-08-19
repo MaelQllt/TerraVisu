@@ -27,36 +27,18 @@ def _fetch_values(geo_layer, field):
             """,
             {"field": field, "layer_id": geo_layer.id},
         )
-<<<<<<< HEAD
-        return [float(row[0]) for row in cursor]
-
-
-def discretize_jenks_kmeans1d(geo_layer, field, class_count):
-    """K-means 1D (C) : approximation Jenks, rapide, non déterministe.  list[float] de class_count+1 bornes."""
-=======
         return np.fromiter((row[0] for row in cursor), dtype=np.float64)
 
 
 def discretize_jenks_kmeans1d(geo_layer, field, class_count):
     """K-means 1D (C) : approximation Jenks, rapide. list[float] de class_count+1 bornes."""
->>>>>>> upstream/develop
     values = _fetch_values(geo_layer, field)
     if len(values) < 2:
         return []
     _, centroids = kmeans1d.cluster(values, class_count)
     sorted_c = sorted(centroids)
-<<<<<<< HEAD
-    breaks = [min(values)]
-    for i in range(len(sorted_c) - 1):
-        breaks.append((sorted_c[i] + sorted_c[i + 1]) / 2)
-    breaks.append(max(values))
-    return breaks
-
-
-=======
     breaks = [float(values.min())]
     for i in range(len(sorted_c) - 1):
         breaks.append((sorted_c[i] + sorted_c[i + 1]) / 2)
     breaks.append(float(values.max()))
     return breaks
->>>>>>> upstream/develop
