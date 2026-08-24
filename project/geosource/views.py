@@ -612,6 +612,22 @@ class SourceModelViewset(ModelViewSet):
             except Exception:
                 logger.warning("bbox query failed for source %s", pk)
 
+        if bbox is None and file_field:
+            try:
+                ds = DataSource(file_field.path)
+                layer = ds[0]
+                if layer.extent:
+                    ext = layer.extent
+                    if layer.srs and layer.srs.srid and layer.srs.srid != 4326:
+                        ct = CoordTransform(layer.srs, SpatialReference(4326))
+                        ring = OGRGeometry.from_bbox([ext.min_x, ext.min_y, ext.max_x, ext.max_y])
+                        ring.transform(ct)
+                        bbox = list(ring.extent)
+                    else:
+                        bbox = [ext.min_x, ext.min_y, ext.max_x, ext.max_y]
+            except Exception:
+                logger.warning("file-based bbox fallback failed for source %s", pk)
+
         geometry_types = None
         mixed_geometries = False
         if geom_name:
