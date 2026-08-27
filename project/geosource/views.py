@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import mimetypes
 import os
 import re
 import subprocess
@@ -17,6 +18,7 @@ from django.contrib.gis.gdal import (
 from django.contrib.gis.gdal.geometries import Point
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db.models import Count
+from django.http import Http404
 from geostore import GeometryTypes
 from rest_framework import status
 from rest_framework.decorators import action
@@ -34,7 +36,7 @@ from .models import (
 )
 from .parsers import NestedMultipartJSONParser
 from .permissions import SourcePermission
-from .serializers import SourceListSerializer, SourceSerializer
+from .serializers import SourceListSerializer, SourceSerializer, strip_storage_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -646,4 +648,22 @@ class SourceModelViewset(ModelViewSet):
             "bbox": bbox,
             "column_count": column_count,
         })
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        """Download the uploaded source file."""
+        from django.http import FileResponse
+
+        source = self.get_object()
+        file_field = getattr(source, "file", None)
+        if not file_field:
+            raise Http404("No file associated with this source")
+        filename = strip_storage_suffix(os.path.basename(file_field.name))
+        content_type, _ = mimetypes.guess_type(filename)
+        return FileResponse(
+            file_field.open("rb"),
+            as_attachment=True,
+            filename=filename,
+            content_type=content_type,
+        )
 

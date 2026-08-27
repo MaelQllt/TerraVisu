@@ -262,6 +262,14 @@ class PostGISSourceSerializer(SourceSerializer):
         extra_kwargs = {"db_password": {"write_only": True}}
 
 
+def strip_storage_suffix(name):
+    """Strip Django storage suffix: \"name_RANDOM7chars.ext\" -> \"name.ext\"."""
+    match = re.match(r"^(.+)_[A-Za-z0-9]{7}(\.[^.]+)$", name)
+    if match:
+        return f"{match.group(1)}{match.group(2)}"
+    return name
+
+
 class FileSourceSerializer(SourceSerializer):
     filename = serializers.SerializerMethodField()
 
@@ -273,12 +281,7 @@ class FileSourceSerializer(SourceSerializer):
 
     def get_filename(self, instance):
         if instance.file:
-            name = basename(instance.file.name)
-            # Strip Django storage suffix: "name_RANDOM7chars.ext" -> "name.ext"
-            match = re.match(r"^(.+)_[A-Za-z0-9]{7}(\.[^.]+)$", name)
-            if match:
-                return f"{match.group(1)}{match.group(2)}"
-            return name
+            return strip_storage_suffix(basename(instance.file.name))
 
     def _validate_field_infos(self, data):
         # remove _type field as it is not needed by the model
