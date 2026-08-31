@@ -247,6 +247,9 @@ class Source(PolymorphicModel, CeleryCallMethodsMixin):
             raise SourceException(str(exc))
 
         self.report.errors += records_errors
+        update_interval = max(1, len(records) // 100)
+        self.report.total = len(records)
+        self.report.save(update_fields=["total"])
         for i, row in enumerate(records):
             total += 1
             geometry = row.pop(self.SOURCE_GEOM_ATTRIBUTE)
@@ -277,6 +280,10 @@ class Source(PolymorphicModel, CeleryCallMethodsMixin):
                 )
                 continue
             row_count += 1
+            if row_count % update_interval == 0:
+                self.report.added_lines = added_rows
+                self.report.modified_lines = modified_rows
+                self.report.save(update_fields=["added_lines", "modified_lines"])
         deleted, _ = self.clear_features(layer, begin_date)
 
         self.report.added_lines = added_rows
