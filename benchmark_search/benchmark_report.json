@@ -1,0 +1,457 @@
+{
+  "benchmark": {
+    "generated_at": "2026-08-31T15:07:14.796770+00:00",
+    "iterations": 10,
+    "result_size": 10,
+    "layers": [
+      "communes-simplifiees",
+      "communes-x4"
+    ]
+  },
+  "results": [
+    {
+      "layer": "communes-simplifiees",
+      "term": "toulou",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 325.13,
+        "median": 319.4,
+        "p95": 378.85,
+        "min": 297.77,
+        "max": 367.93,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 5,
+      "first_5": [
+        {
+          "identifier": "66213",
+          "nom": "Toulouges"
+        },
+        {
+          "identifier": "31555",
+          "nom": "Toulouse"
+        },
+        {
+          "identifier": "39533",
+          "nom": "Toulouse-le-Château"
+        },
+        {
+          "identifier": "40318",
+          "nom": "Toulouzette"
+        },
+        {
+          "identifier": "31575",
+          "nom": "Vieille-Toulouse"
+        }
+      ]
+    },
+    {
+      "layer": "communes-simplifiees",
+      "term": "toulou",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 12.87,
+        "median": 12.6,
+        "p95": 15.57,
+        "min": 11.49,
+        "max": 15.18,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 5,
+      "first_5": [
+        {
+          "_feature_id": "39533",
+          "nom": "Toulouse-le-Château"
+        },
+        {
+          "_feature_id": "31555",
+          "nom": "Toulouse"
+        },
+        {
+          "_feature_id": "31575",
+          "nom": "Vieille-Toulouse"
+        },
+        {
+          "_feature_id": "40318",
+          "nom": "Toulouzette"
+        },
+        {
+          "_feature_id": "66213",
+          "nom": "Toulouges"
+        }
+      ]
+    },
+    {
+      "layer": "communes-simplifiees",
+      "term": "bézi",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 337.65,
+        "median": 339.47,
+        "p95": 380.98,
+        "min": 312.44,
+        "max": 376.64,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 15,
+      "first_5": [
+        {
+          "identifier": "34032",
+          "nom": "Béziers"
+        },
+        {
+          "identifier": "62127",
+          "nom": "Bezinghem"
+        },
+        {
+          "identifier": "31067",
+          "nom": "Bezins-Garraux"
+        },
+        {
+          "identifier": "16027",
+          "nom": "Barbezières"
+        },
+        {
+          "identifier": "16028",
+          "nom": "Barbezieux-Saint-Hilaire"
+        }
+      ]
+    },
+    {
+      "layer": "communes-simplifiees",
+      "term": "bézi",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 12.79,
+        "median": 12.84,
+        "p95": 14.96,
+        "min": 11.28,
+        "max": 14.6,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 7,
+      "first_5": [
+        {
+          "_feature_id": "34310",
+          "nom": "Thézan-lès-Béziers"
+        },
+        {
+          "_feature_id": "32403",
+          "nom": "Saint-Pierre-d'Aubézies"
+        },
+        {
+          "_feature_id": "34178",
+          "nom": "Murviel-lès-Béziers"
+        },
+        {
+          "_feature_id": "34032",
+          "nom": "Béziers"
+        },
+        {
+          "_feature_id": "34139",
+          "nom": "Lieuran-lès-Béziers"
+        }
+      ]
+    },
+    {
+      "layer": "communes-simplifiees",
+      "term": "ajac",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 321.18,
+        "median": 315.99,
+        "p95": 362.41,
+        "min": 288.19,
+        "max": 359.18,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 9,
+      "first_5": [
+        {
+          "identifier": "11003",
+          "nom": "Ajac"
+        },
+        {
+          "identifier": "2A004",
+          "nom": "Ajaccio"
+        },
+        {
+          "identifier": "65128",
+          "nom": "Castelbajac"
+        },
+        {
+          "identifier": "11133",
+          "nom": "Fajac-en-Val"
+        },
+        {
+          "identifier": "11134",
+          "nom": "Fajac-la-Relenque"
+        }
+      ]
+    },
+    {
+      "layer": "communes-simplifiees",
+      "term": "ajac",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 13.99,
+        "median": 13.68,
+        "p95": 17.25,
+        "min": 11.81,
+        "max": 16.81,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 9,
+      "first_5": [
+        {
+          "_feature_id": "65128",
+          "nom": "Castelbajac"
+        },
+        {
+          "_feature_id": "11003",
+          "nom": "Ajac"
+        },
+        {
+          "_feature_id": "11133",
+          "nom": "Fajac-en-Val"
+        },
+        {
+          "_feature_id": "33178",
+          "nom": "Gajac"
+        },
+        {
+          "_feature_id": "2A004",
+          "nom": "Ajaccio"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "toulou",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 995.99,
+        "median": 992.38,
+        "p95": 1125.12,
+        "min": 951.29,
+        "max": 1092.66,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 20,
+      "first_5": [
+        {
+          "identifier": "66213",
+          "nom": "Toulouges"
+        },
+        {
+          "identifier": "66213-2",
+          "nom": "Toulouges-2"
+        },
+        {
+          "identifier": "66213-3",
+          "nom": "Toulouges-3"
+        },
+        {
+          "identifier": "66213-4",
+          "nom": "Toulouges-4"
+        },
+        {
+          "identifier": "31555",
+          "nom": "Toulouse"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "toulou",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 37.87,
+        "median": 35.83,
+        "p95": 57.25,
+        "min": 29.26,
+        "max": 53.04,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 20,
+      "first_5": [
+        {
+          "_feature_id": "39533",
+          "nom": "Toulouse-le-Château"
+        },
+        {
+          "_feature_id": "31555",
+          "nom": "Toulouse"
+        },
+        {
+          "_feature_id": "31575",
+          "nom": "Vieille-Toulouse"
+        },
+        {
+          "_feature_id": "40318",
+          "nom": "Toulouzette"
+        },
+        {
+          "_feature_id": "66213",
+          "nom": "Toulouges"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "bézi",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 1031.15,
+        "median": 1025.69,
+        "p95": 1112.72,
+        "min": 975.53,
+        "max": 1102.09,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 60,
+      "first_5": [
+        {
+          "identifier": "34032",
+          "nom": "Béziers"
+        },
+        {
+          "identifier": "34032-2",
+          "nom": "Béziers-2"
+        },
+        {
+          "identifier": "34032-3",
+          "nom": "Béziers-3"
+        },
+        {
+          "identifier": "34032-4",
+          "nom": "Béziers-4"
+        },
+        {
+          "identifier": "62127",
+          "nom": "Bezinghem"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "bézi",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 29.96,
+        "median": 29.22,
+        "p95": 34.4,
+        "min": 27.2,
+        "max": 33.86,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 28,
+      "first_5": [
+        {
+          "_feature_id": "34310",
+          "nom": "Thézan-lès-Béziers"
+        },
+        {
+          "_feature_id": "32403",
+          "nom": "Saint-Pierre-d'Aubézies"
+        },
+        {
+          "_feature_id": "34178",
+          "nom": "Murviel-lès-Béziers"
+        },
+        {
+          "_feature_id": "34032",
+          "nom": "Béziers"
+        },
+        {
+          "_feature_id": "34139",
+          "nom": "Lieuran-lès-Béziers"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "ajac",
+      "engine": "geo_api",
+      "duration_ms": {
+        "mean": 1028.21,
+        "median": 1028.36,
+        "p95": 1130.61,
+        "min": 971.61,
+        "max": 1108.5,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 36,
+      "first_5": [
+        {
+          "identifier": "11003",
+          "nom": "Ajac"
+        },
+        {
+          "identifier": "11003-2",
+          "nom": "Ajac-2"
+        },
+        {
+          "identifier": "11003-3",
+          "nom": "Ajac-3"
+        },
+        {
+          "identifier": "11003-4",
+          "nom": "Ajac-4"
+        },
+        {
+          "identifier": "2A004",
+          "nom": "Ajaccio"
+        }
+      ]
+    },
+    {
+      "layer": "communes-x4",
+      "term": "ajac",
+      "engine": "elasticsearch",
+      "duration_ms": {
+        "mean": 31.72,
+        "median": 32.0,
+        "p95": 36.21,
+        "min": 27.14,
+        "max": 35.81,
+        "count": 10,
+        "errors": 0
+      },
+      "total_results": 36,
+      "first_5": [
+        {
+          "_feature_id": "65128",
+          "nom": "Castelbajac"
+        },
+        {
+          "_feature_id": "11003",
+          "nom": "Ajac"
+        },
+        {
+          "_feature_id": "11133",
+          "nom": "Fajac-en-Val"
+        },
+        {
+          "_feature_id": "33178",
+          "nom": "Gajac"
+        },
+        {
+          "_feature_id": "2A004",
+          "nom": "Ajaccio"
+        }
+      ]
+    }
+  ]
+}
