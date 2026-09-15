@@ -51,7 +51,7 @@ Détaillé dans [`geo_api`](../project/geo_api/README.md#recherche).
 
 ## Palier 2 : migration Elasticsearch restante
 
-Ces trois dépendances à Elasticsearch sont une dette connue, sans risque
+Ces quatre dépendances à Elasticsearch sont une dette connue, sans risque
 immédiat, mais elles empêchent de retirer Elasticsearch du projet. Classées
 du plus isolé au plus lourd.
 
@@ -72,23 +72,41 @@ langage de filtres PivotQL aux filtres par propriété déjà exposés par
 
 ### 5. Module Sheet (`front/src/views/Sheet`, `useEsClient.js`)
 
-Interroge encore Elasticsearch directement. La dépendance historique la plus
-lourde des trois : à traiter en dernier, une fois les deux précédentes
-résorbées.
+Interroge encore Elasticsearch directement. À traiter après les deux
+précédentes.
+
+### 6. Panneau de filtres interactif (`FiltersPanel`)
+
+Un import commenté révèle une migration commencée puis abandonnée :
+
+```js
+// front/src/terra-front/modules/Visualizer/LayersTree/LayersTreeItem/FiltersPanel/FiltersPanelContent/index.js
+import FiltersPanelContent from './FiltersPanelContent';
+console.log('[FiltersPanel] version ES');
+
+// // version geo-api
+// import FiltersPanelContent from './FiltersPanelContentGeoAPI';
+// console.log('[FiltersPanel] version geo-api');
+```
+
+Un fichier `FiltersPanelContentGeoAPI.js` existe déjà à côté, mais l'import
+actif pointe toujours vers la version Elasticsearch, avec un `console.log`
+de debug laissé en production. À vérifier : l'état d'avancement réel de
+`FiltersPanelContentGeoAPI.js` avant de basculer l'import.
 
 ## Palier 3 : cohérence et dette de qualité
 
 Pas de risque immédiat, mais ces points coûtent cher à maintenir s'ils
 restent indéfiniment en l'état.
 
-### 6. Coexistence des deux implémentations de Jenks
+### 7. Coexistence des deux implémentations de Jenks
 
 Décision à trancher : garder les deux méthodes dans l'interface (au risque de
 dérouter l'administrateur) ou migrer progressivement les couches existantes
 vers la nouvelle implémentation. Détaillé dans
 [l'éditeur de style gradué](../admin/src/modules/RA/DataLayer/components/tabs/StyleTab/Style/README.md#discrétisation).
 
-### 7. Deux parseurs CSV distincts
+### 8. Deux parseurs CSV distincts
 
 La prévisualisation à l'import (`_preview_csv`, module `csv` de Python) et
 l'import réel (`CSVSource.get_file_as_sheet`, `pyexcel`) sont deux parseurs
@@ -96,7 +114,31 @@ indépendants, avec un risque de divergence de comportement entre les deux.
 Détaillé dans
 [la prévisualisation de fichier](../admin/src/modules/RA/DataSource/components/FILE_PREVIEW.md#cas-du-csv).
 
-### 8. Plan de benchmark jamais exécuté
+### 9. `source_filter` : expressions avec OR/NOT non appliquées à la table et à la recherche
+
+**État actuel** : `Layer.source_filter` (expression PivotQL admin) est
+compilé côté client vers `geo_api` (`front/src/views/Visualizer/pivotqlToGeoApi.js`)
+pour que la vue tabulaire et la recherche respectent le même filtre que le
+style carte. Seules les expressions en ET simple (`==`, `<`, `<=`, `>`, `>=`,
+`IN` combinés par `and`) sont supportées : `geo_api` n'a aujourd'hui aucun
+moyen d'exprimer un `or` ou une négation dans ses paramètres de requête.
+
+**Risque** : une expression avec `or`/`not`/`!=` continue de filtrer
+correctement la carte (le compilateur Mapbox GL, lui, sait le faire), mais la
+vue tabulaire et la recherche affichent alors l'intégralité des données, sans
+filtre. Le repli est désormais visible (`console.warn` côté front,
+`"source_filter: expression not supported by geo_api filters..."`), donc ce
+n'est plus un échec silencieux, mais l'incohérence entre carte et données
+reste possible tant qu'un tel filtre est utilisé.
+
+**Action suggérée** : si des filtres avec `or`/`not` sont réellement utilisés
+en production, étendre `geo_api` pour accepter l'AST PivotQL complet
+(transmis en JSON par le front, déjà disponible via le parseur existant) et
+le compiler côté backend en filtre Django `Q` (`&&`→`Q & Q`, `||`→`Q | Q`,
+`!`→`~Q`). Sinon, documenter que seules les expressions en ET simple sont
+supportées pour ce champ.
+
+### 10. Plan de benchmark jamais exécuté
 
 Aucune mesure de performance en conditions réelles n'a été faite à ce jour :
 les constats cités dans les autres documents restent fondés sur la lecture du
